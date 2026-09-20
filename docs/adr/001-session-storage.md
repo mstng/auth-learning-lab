@@ -1,0 +1,4 @@
+# ADR 001: PostgreSQLにSessionを保存
+採用。ユーザーとSessionの対応をSQLで観察でき、複数プロセスでも共有できる。メモリーSessionを採用しない。学習空間Cookieごとにレコードを分離し、認証判定は別のSession Cookieで行う。ローテーションはトランザクションで旧Session削除＋新Session作成。教材では実IDを観察するためDBにIDを保存し、実運用への転用ではIDハッシュ化を検討する。
+
+Cookieやユーザーのroleだけを信用しない。毎回Sessionの存在・期限・ユーザーstatusを検証する。

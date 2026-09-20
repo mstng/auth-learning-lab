@@ -1,0 +1,9 @@
+# ADR 005: Docker不要の組み込みPGliteへ変更
+
+ユーザーの「Dockerなし」指示に基づきADR 001の独立PostgreSQL構成を置き換える。PGliteをNode.js内で実行し、data/authlabへ永続化。外部DB・TCPソケット・pg Poolは使わない。
+
+DBインスタンスと初期化PromiseをglobalThisに保存し、開発時のHMRでも共有する。transaction(callback)で処理を原子的にし、同一接続上の手動BEGIN混在を避ける。DB接続は遅延初期化しビルド時にデータを作らない。
+
+起動スクリプトで絶対保存パス・localhost Origin・LAB_MODE等を設定し、.env作成を不要にする。同じDBに別プロセスがアクセスすることは起動ロックで拒否。開発とStandaloneで保存先が変わらないよう絶対パスを渡す。
+
+UI上でもSQLが同一プロセス内で実行されることを明記。認証のHTTP・Cookie・SessionのSQL保存・有効期限・ログアウトの仕組みは維持する。旧Docker Volumeからの自動移行は対象外。
