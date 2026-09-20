@@ -30,6 +30,6 @@ export function LearningGuide({ password = false }: { password?: boolean }) {
     </div>
     <p className="guide-caption">矢印は情報の行き来。ブラウザはDBを直接操作しません。DBはこのアプリに内蔵されています。ABC…は説明用の架空の番号です。</p>
     <details className="guide-glossary"><summary>用語を確認する：Cookie・Session・API・DB</summary><dl><div><dt>Cookie</dt><dd>ブラウザがデータを保存し、条件に合うアクセスで自動送信する仕組み。ここでは受付番号を入れます。</dd></div><div><dt>Session / Session ID</dt><dd>Sessionはサーバー側のログイン記録。Session IDはその記録を探す番号です。「受付番号」はたとえで、実際には推測しにくいランダムな値です。</dd></div><div><dt>API / DB</dt><dd>APIは処理を頼む窓口。DB（データベース）はデータの保管庫です。</dd></div><div><dt>認証 / 認可</dt><dd>認証は「誰か」を確かめること。認可は「その操作をしてよいか」を判断することです。</dd></div></dl></details>
-    <div className="first-experiment"><strong>まずはこの操作だけでOK</strong><p>{password ? '下の「パスワードを照合」を押す → 「次へ」で本人確認の過程を追う。' : '下の「ログイン → Profile」を押す → 「次へ」で記録を追う → Cookieの番号とDBの番号を比べる。'}</p><small>上の場面切り替えは説明のみです。実際のログイン操作は、下のボタンで行います。</small></div>
+    <div className="first-experiment"><strong>まずはこの操作だけでOK</strong><p>{password ? '下の「パスワードを照合」を押す → 「次へ」で本人確認の過程を追う。' : '「ログインする」を押す → 「次へ」で記録を追う → 「自分の情報を見る」で番号の再利用を確かめる。'}</p><small>上の場面切り替えは説明のみです。実際のログイン操作は、下のボタンで行います。</small></div>
   </section>;
 }

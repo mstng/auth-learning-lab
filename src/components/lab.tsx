@@ -17,9 +17,13 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import type { Result, LabState, Step, Layer } from "@/lib/types";
+import type { Result, LabState, Layer } from "@/lib/types";
 import { Flow, responsibilities, simpleResponsibilities } from "./flow";
 import { Sequence } from "./sequence";
+import { GuidedTour } from "./guided-tour";
+import { ExecutionMap } from "./execution-map";
+import { StateChanges } from "./state-changes";
+import { actionNames, challengeLabels, challengeProofs, type Observation } from "@/lib/learning";
 import { LearningGuide } from "./learning-guide";
 import { layerNames, plainStep } from "@/lib/plain-language";
 import {
@@ -38,13 +42,6 @@ const tabs = [
   ["raw", "Raw Data"],
   ["sequence", "Sequence"],
 ] as const;
-const missions = [
-  ["ログインとProfileを実行", "CookieのIDとDBのIDは一致している？"],
-  ["間違ったPasswordで実行", "新しいSessionは作られた？"],
-  ["DBの期限を切らしてProfileを実行", "Cookieがあっても401になる？"],
-  ["userでAdmin APIを実行", "401と403の違いを説明できる？"],
-  ["ログアウト後にProfileを実行", "CookieとDBの両方が変化した？"],
-];
 async function request(path: string, method = "GET", body?: unknown) {
   const res = await fetch(`/api/${path}`, {
     method,
@@ -63,8 +60,10 @@ async function request(path: string, method = "GET", body?: unknown) {
 }
 export function Lab({ mode }: { mode: Mode }) {
   const [state, setState] = useState<LabState | null>(null),
-    [runs, setRuns] = useState<Result[]>([]),
+    [records, setRecords] = useState<Observation[]>([]),
+    [guided, setGuided] = useState(false),
     [index, setIndex] = useState(0),
+    [emptyOperation, setEmptyOperation] = useState<number | null>(null),
     [busy, setBusy] = useState(true),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
@@ -75,16 +74,21 @@ export function Lab({ mode }: { mode: Mode }) {
     [password, setPassword] = useState("LearnSession!2026"),
     [ttl, setTtl] = useState(300),
     [selectedLayer, setSelectedLayer] = useState<Layer | null>(null),
-    [missionDone, setMissionDone] = useState<number[]>([]),
     [dbHistory, setDbHistory] = useState(true);
   const booted = useRef(false),
     locked = useRef(false);
-  const steps = runs.flatMap((r) => r.trace);
-  const step = steps[index];
+  const runs = records.map(o => o.result);
+  const entries = records.flatMap((observation, operation) => observation.result.trace.map((step, local) => ({ step, observation, operation, local })));
+  const steps = entries.map(e => e.step);
+  const selected = emptyOperation === null ? entries[index] : undefined;
+  const selectedObservation = emptyOperation !== null ? records[emptyOperation] : selected?.observation ?? records.at(-1);
+  const proofs = challengeProofs(records);
+  const step = selected?.step;
   const simple = plainStep(step);
   const refresh = useCallback(async () => {
     const data = await request("lab/state");
     setState(data.state);
+    setError("");
   }, []);
   const init = useCallback(async () => {
     setBusy(true);
@@ -111,41 +115,47 @@ export function Lab({ mode }: { mode: Mode }) {
     }, 1800);
     return () => clearTimeout(timer);
   }, [playing, index, steps.length]);
-  async function run(action: string, body?: unknown) {
+  async function run(action: string, body?: unknown, startGuide = false) {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
     setError("");
     setPlaying(false);
     setSelectedLayer(null);
-    let collected: Result[] = [];
     try {
-      const post = !["profile", "admin"].includes(action);
-      const first: Result = await request(action, post ? "POST" : "GET", body);
-      collected = [first];
-      setState(first.state);
-      if (action === "login" && first.success) {
-        const profile: Result = await request("profile");
-        collected.push(profile);
-        setState(profile.state);
+      // Observe actual request cookies immediately before and after the mutation.
+      const before: LabState = (await request("lab/state")).state;
+      const result: Result = await request(action, ["profile", "admin"].includes(action) ? "GET" : "POST", body);
+      setState(result.state);
+      setMessage(result.message);
+      let after: LabState | null = null;
+      try {
+        after = (await request("lab/state")).state;
+        setState(after);
+      } catch {
+        setError("操作は実行されましたが、操作後の確認通信に失敗しました。達成判定は保留です。状態は「現在の状態を更新」で確認できます。");
       }
-      setRuns(collected);
-      setIndex(0);
-      setMessage(collected.at(-1)?.message ?? "");
       if (action === "lab/reset") {
-        setRuns([]);
-        setMessage(first.message);
+        setRecords([]);
+        setIndex(0);
+        setEmptyOperation(null);
+        setGuided(startGuide && !!after);
+      } else {
+        setRecords(previous => [...previous, { action, result, before, after }]);
+        setIndex(result.trace.length ? steps.length : Math.max(0, steps.length - 1));
+        setEmptyOperation(result.trace.length ? null : records.length);
       }
     } catch (e) {
-      if (collected.length) {
-        setRuns(collected);
-        setIndex(0);
-      }
       setError((e as Error).message);
     } finally {
       locked.current = false;
       setBusy(false);
     }
+  }
+  function review(o: Observation) {
+    const offset = entries.findIndex(e => e.observation === o);
+    if (offset >= 0) select(offset);
+    document.getElementById("execution-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   const isPassword = mode === "password";
   const title =
@@ -156,8 +166,11 @@ export function Lab({ mode }: { mode: Mode }) {
         : "Session認証";
   const selectedSnapshot =
     dbHistory && step?.snapshot ? step.snapshot : state?.snapshot;
-  const previous = index > 0 ? steps[index - 1]?.snapshot : undefined;
+  const previous = selected
+    ? selected.local > 0 ? selected.observation.result.trace[selected.local - 1]?.snapshot : selected.observation.before.snapshot
+    : undefined;
   function select(n: number) {
+    setEmptyOperation(null);
     setIndex(n);
     setPlaying(false);
     setSelectedLayer(null);
@@ -238,7 +251,14 @@ export function Lab({ mode }: { mode: Mode }) {
         </section>
       ) : (
         <>
-          <LearningGuide password={isPassword} />
+          {!isPassword && <GuidedTour active={guided} records={records} state={state} busy={busy}
+            onStart={() => void run("lab/reset", undefined, true)} onExit={() => setGuided(false)}
+            onRun={action => void run(action, action === "login" ? { email: "sample@example.com", password: "LearnSession!2026", ttl: 300 } : undefined)}
+            onReview={review} />}
+          <details className="reference-guide" open={isPassword}>
+            <summary>全体像と用語を確認する（説明用の図）</summary>
+            <LearningGuide password={isPassword} />
+          </details>
           <div className="lab-grid">
             <section className="panel operation-panel">
               <div className="panel-heading">
@@ -317,7 +337,7 @@ export function Lab({ mode }: { mode: Mode }) {
                       ? "接続・実行中…"
                       : isPassword
                         ? "パスワードを照合"
-                        : "ログイン → Profile"}
+                        : "ログインする"}
                     <ArrowRight size={17} />
                   </button>
                 </form>
@@ -389,7 +409,7 @@ export function Lab({ mode }: { mode: Mode }) {
                 )}
               </div>
             </section>
-            <section className="panel flow-panel">
+            <section className="panel flow-panel" id="execution-panel">
               <div className="panel-heading">
                 <h2>
                   <span className="section-number">02</span> 内部を辿る
@@ -398,21 +418,28 @@ export function Lab({ mode }: { mode: Mode }) {
                   {steps.length ? "実行記録を再生" : "DATA FLOW"}
                 </span>
               </div>
+              {records.length > 0 && <div className="record-picker"><label htmlFor="record-choice">見返す操作</label><select id="record-choice" value={emptyOperation ?? selected?.operation ?? records.length - 1} onChange={e => {
+                const operation = Number(e.target.value);
+                const next = entries.findIndex(entry => entry.operation === operation);
+                if (next >= 0) select(next);
+                else { setEmptyOperation(operation); setPlaying(false); setSelectedLayer(null); }
+              }}>{records.map((o, i) => <option key={o.result.requestId} value={i}>操作 {i + 1} · {actionNames[o.action]} · {o.result.http.status}</option>)}</select></div>}
               <div className="current-step">
                 <span className="step-index">
-                  {steps.length ? String(index + 1).padStart(2, "0") : "—"}
+                  {step ? String(index + 1).padStart(2, "0") : "—"}
                   <small>/ {String(steps.length).padStart(2, "0")}</small>
                 </span>
                 <div>
                   <span className="eyebrow">CURRENT LOCATION</span>
-                  <h3>{step ? (engineer ? step.location : layerNames[step.location]) : "操作を待っています"}</h3>
+                  <h3>{step ? (engineer ? step.location : layerNames[step.location]) : emptyOperation !== null ? "入力の確認で終了" : "操作を待っています"}</h3>
                   <p>
-                    {step ? (engineer ? step.what : simple?.title) : "「操作する」のボタンから実際の認証を実行します。"}
+                    {step ? (engineer ? step.what : simple?.title) : emptyOperation !== null ? "この操作は認証処理に進まなかったため、ステップの記録はありません。" : "「操作する」のボタンから実際の認証を実行します。"}
                   </p>
                   {step && !engineer && <small className="technical-caption">{step.location} · {step.what}</small>}
                 </div>
               </div>
-              <Flow engineer={engineer} step={step} onLayer={setSelectedLayer} />
+              <ExecutionMap step={step} previous={previous} number={index + 1} />
+              <details className="role-breakdown"><summary>6つの役割に分けて詳しく見る</summary><Flow engineer={engineer} step={step} onLayer={setSelectedLayer} /></details>
               {selectedLayer && (
                 <div className="layer-detail">
                   <strong>{layerNames[selectedLayer]} <small> / {selectedLayer}</small></strong>
@@ -429,14 +456,14 @@ export function Lab({ mode }: { mode: Mode }) {
                 <button
                   className="icon-button"
                   aria-label="前のステップ"
-                  disabled={!steps.length || index === 0}
+                  disabled={!step || index === 0}
                   onClick={() => select(index - 1)}
                 >
                   <ArrowLeft size={17} />
                 </button>
                 <button
                   className="button small"
-                  disabled={!steps.length}
+                  disabled={!step}
                   onClick={() => {
                     if (index === steps.length - 1) setIndex(0);
                     setPlaying(!playing);
@@ -456,7 +483,7 @@ export function Lab({ mode }: { mode: Mode }) {
                 />
                 <button
                   className="button dark small"
-                  disabled={!steps.length || index >= steps.length - 1}
+                  disabled={!step || index >= steps.length - 1}
                   onClick={() => select(index + 1)}
                 >
                   次へ <ArrowRight size={16} />
@@ -579,6 +606,7 @@ export function Lab({ mode }: { mode: Mode }) {
               </div>
             </aside>
           </div>
+          <StateChanges observation={selectedObservation} number={(emptyOperation ?? selected?.operation ?? Math.max(0, records.length - 1)) + 1} />
           <section className="panel inspector">
             <div className="inspector-heading">
               <h2>データを観察する</h2>
@@ -608,7 +636,7 @@ export function Lab({ mode }: { mode: Mode }) {
               id={`panel-${tab}`}
               aria-labelledby={`tab-${tab}`}
             >
-              {tab === "http" && <HttpView runs={runs} />}{" "}
+              {tab === "http" && <><p className="inspector-note">「見返す操作」で選んだ1回分の通信を表示します。操作前後の状態確認APIは、この通信とは別に実行しています。</p><HttpView runs={selectedObservation ? [selectedObservation.result] : []} /></>}{" "}
               {tab === "browser" && <BrowserView state={state} />}
               {tab === "sequence" && <Sequence steps={steps} index={index} onSelect={select}/>}
               {tab === "database" && (
@@ -680,7 +708,7 @@ export function Lab({ mode }: { mode: Mode }) {
               <p>
                 {isPassword
                   ? "ハッシュの実物はRaw Dataタブで確認できます。"
-                  : "チェックはこの画面を開いている間だけ保持します。"}
+                  : "実際に確認できた結果を自動で記録します。再読み込み・初期化でリセットされます。"}
               </p>
             </div>
             {isPassword ? (
@@ -709,30 +737,12 @@ export function Lab({ mode }: { mode: Mode }) {
               </div>
             ) : (
               <div className="missions">
-                {missions.map(([title, desc], i) => (
-                  <button
-                    key={title}
-                    aria-pressed={missionDone.includes(i)}
-                    onClick={() =>
-                      setMissionDone((d) =>
-                        d.includes(i) ? d.filter((n) => n !== i) : [...d, i],
-                      )
-                    }
-                  >
-                    <span
-                      className={`mission-check ${missionDone.includes(i) ? "done" : ""}`}
-                    >
-                      {missionDone.includes(i) ? (
-                        <CheckCircle2 size={21} />
-                      ) : (
-                        String(i + 1).padStart(2, "0")
-                      )}
-                    </span>
-                    <span>
-                      <strong>{title}</strong>
-                      <small>{desc}</small>
-                    </span>
-                  </button>
+                {challengeLabels.map(([title, desc], i) => (
+                  <article key={title} className={`challenge ${proofs[i] ? "achieved" : ""}`} data-achieved={!!proofs[i]}>
+                    <span className={`mission-check ${proofs[i] ? "done" : ""}`}>{proofs[i] ? <CheckCircle2 size={21} /> : String(i + 1).padStart(2, "0")}</span>
+                    <div><strong>{title}</strong><small>{desc}</small><span className="proof-status">{proofs[i] ? "実行結果で確認済み" : "まだ確認していません"}</span>
+                    {proofs[i] && <button className="text-button" onClick={() => review(proofs[i]!)}>根拠の記録を見る</button>}</div>
+                  </article>
                 ))}
               </div>
             )}
