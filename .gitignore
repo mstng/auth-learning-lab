@@ -6,3 +6,6 @@ test-results/
 playwright-report/
 
 data/
+
+# 版を移行したときの旧学習データの退避先
+data.bak-*/
