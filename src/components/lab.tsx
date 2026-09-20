@@ -61,7 +61,7 @@ async function request(path: string, method = "GET", body?: unknown) {
 export function Lab({ mode }: { mode: Mode }) {
   const [state, setState] = useState<LabState | null>(null),
     [records, setRecords] = useState<Observation[]>([]),
-    [guided, setGuided] = useState(false),
+    [learning, setLearning] = useState(true),
     [index, setIndex] = useState(0),
     [emptyOperation, setEmptyOperation] = useState<number | null>(null),
     [busy, setBusy] = useState(true),
@@ -115,8 +115,8 @@ export function Lab({ mode }: { mode: Mode }) {
     }, 1800);
     return () => clearTimeout(timer);
   }, [playing, index, steps.length]);
-  async function run(action: string, body?: unknown, startGuide = false) {
-    if (locked.current) return;
+  async function run(action: string, body?: unknown): Promise<Observation | null> {
+    if (locked.current) return null;
     locked.current = true;
     setBusy(true);
     setError("");
@@ -133,20 +133,23 @@ export function Lab({ mode }: { mode: Mode }) {
         after = (await request("lab/state")).state;
         setState(after);
       } catch {
-        setError("操作は実行されましたが、操作後の確認通信に失敗しました。達成判定は保留です。状態は「現在の状態を更新」で確認できます。");
+        setError("操作は実行されましたが、操作後の確認通信に失敗しました。達成判定は保留です。もう一度操作すると確認をやり直せます。");
       }
+      const observation: Observation = { action, result, before, after };
       if (action === "lab/reset") {
         setRecords([]);
         setIndex(0);
         setEmptyOperation(null);
-        setGuided(startGuide && !!after);
+
       } else {
-        setRecords(previous => [...previous, { action, result, before, after }]);
+        setRecords(previous => [...previous, observation]);
         setIndex(result.trace.length ? steps.length : Math.max(0, steps.length - 1));
         setEmptyOperation(result.trace.length ? null : records.length);
       }
+      return observation;
     } catch (e) {
       setError((e as Error).message);
+      return null;
     } finally {
       locked.current = false;
       setBusy(false);
@@ -157,6 +160,7 @@ export function Lab({ mode }: { mode: Mode }) {
     if (offset >= 0) select(offset);
     document.getElementById("execution-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+  const focused = mode === "session" && learning;
   const isPassword = mode === "password";
   const title =
     mode === "database"
@@ -176,7 +180,7 @@ export function Lab({ mode }: { mode: Mode }) {
     setSelectedLayer(null);
   }
   return (
-    <div className="page lab-page">
+    <div className={`page lab-page ${focused ? "learning-page" : ""}`}>
       <div className="page-heading compact">
         <div>
           <span className="eyebrow">
@@ -196,22 +200,23 @@ export function Lab({ mode }: { mode: Mode }) {
                   : "ログイン状態はどこにある？"}
             </span>
           </h1>
-          <p>
+          {!focused && <p>
             {mode === "database"
               ? "組み込みDB（PGlite）に保存された、この学習空間のレコードです。"
               : isPassword
                 ? "まずは、入力したパスワードで本人かどうかを確かめます。"
                 : "なぜ、ログインした後はパスワードを毎回入力しなくてよいのでしょう？"}
-          </p>
+          </p>}
         </div>
-        <button
+        {!focused && <button
           className="button small"
           disabled={busy}
           onClick={() => void run("lab/reset")}
         >
           <RotateCcw size={15} /> 実験を初期化
-        </button>
+        </button>}
       </div>
+      {mode === "session" && <div className="learning-mode" aria-label="学び方"><button aria-pressed={learning} disabled={busy} onClick={() => { setLearning(true); setPlaying(false); setError(""); }}>順番に学ぶ</button><button aria-pressed={!learning} disabled={busy} onClick={() => { setLearning(false); setPlaying(false); setError(""); }}>自由に実験する</button></div>}
       <div aria-live="polite">
         {error && (
           <div className="notice error">
@@ -222,7 +227,7 @@ export function Lab({ mode }: { mode: Mode }) {
             </button>
           </div>
         )}
-        {message && !error && (
+        {message && !error && !focused && (
           <div
             className={`result-message ${runs.at(-1)?.success === false ? "failure" : ""}`}
           >
@@ -231,7 +236,7 @@ export function Lab({ mode }: { mode: Mode }) {
           </div>
         )}
       </div>
-      {mode === "database" ? (
+      {focused ? <GuidedTour records={records} state={state} busy={busy} onRun={action => run(action, action === "login" ? { email: "sample@example.com", password: "LearnSession!2026", ttl: 300 } : undefined)} onExit={() => setLearning(false)} /> : mode === "database" ? (
         <section className="panel">
           <div className="panel-heading">
             <h2>Database / 現在の状態</h2>
@@ -251,10 +256,6 @@ export function Lab({ mode }: { mode: Mode }) {
         </section>
       ) : (
         <>
-          {!isPassword && <GuidedTour active={guided} records={records} state={state} busy={busy}
-            onStart={() => void run("lab/reset", undefined, true)} onExit={() => setGuided(false)}
-            onRun={action => void run(action, action === "login" ? { email: "sample@example.com", password: "LearnSession!2026", ttl: 300 } : undefined)}
-            onReview={review} />}
           <details className="reference-guide" open={isPassword}>
             <summary>全体像と用語を確認する（説明用の図）</summary>
             <LearningGuide password={isPassword} />
