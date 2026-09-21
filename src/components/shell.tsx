@@ -14,6 +14,7 @@ const nav = [
   ["/", "学習ロードマップ", LayoutGrid],
   ["/password", "Password認証", KeyRound],
   ["/session", "Session認証", Workflow],
+  ["/jwt", "JWT認証", KeyRound],
   ["/database", "Database Viewer", Database],
 ] as const;
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -60,7 +61,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-footer">
           <LockKeyhole size={16} />
           <div>
-            LOCAL LEARNING ENVIRONMENT<small>PHASE 01 — 06</small>
+            LOCAL LEARNING ENVIRONMENT<small>PHASE 01 — 07</small>
           </div>
         </div>
       </aside>
@@ -71,7 +72,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <strong>{nav.find((n) => n[0] === path)?.[1] ?? "Auth Lab"}</strong>
           </span>
           <span className="environment">
-            ローカル実験用 <span className="mono">v1.6</span>
+            ローカル実験用 <span className="mono">v1.7</span>
           </span>
         </header>
         <main>{children}</main>

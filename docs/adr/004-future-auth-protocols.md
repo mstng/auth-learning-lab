@@ -6,3 +6,5 @@
 - Refresh Token Strategy: ハッシュ保存・ローテーション・再利用検知・Token Family単位の失効を検討する。
 
 本版ではJWT発行やOAuthを実装したと見せるUI、ダミーのトークンを成功扱いするAPIは提供しない。
+
+PHASE 7でJWT部分を採用。具体化した判断は[ADR 005](005-jwt-learning.md)。OAuth以降は引き続き未実装。

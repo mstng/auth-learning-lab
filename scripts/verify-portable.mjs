@@ -46,7 +46,7 @@ async function run(args) {
   assert.equal(code, 0, `Failed: ${args.join(" ")}`);
 }
 const jar = new Map();
-async function call(path, method = "GET", body = {}) {
+async function call(path, method = "GET", body = {}, token) {
   const res = await fetch(`${origin}/api/${path}`, {
     method,
     headers: {
@@ -54,6 +54,7 @@ async function call(path, method = "GET", body = {}) {
       "Content-Type": "application/json",
       Origin: origin,
       Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join("; "),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(method === "POST" ? { body: JSON.stringify(body) } : {}),
   });
@@ -67,8 +68,8 @@ async function call(path, method = "GET", body = {}) {
 }
 try {
   await start();
-  await run(["--import", "tsx", "--test", "tests/domain.test.ts"]);
-  await run(["--import", "tsx", "--test", "tests/integration.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/domain.test.ts", "tests/jwt.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/integration.test.ts", "tests/jwt-integration.test.ts"]);
   if (process.env.SKIP_BROWSER !== "true")
     await run(["node_modules/@playwright/test/cli.js", "test"]);
   await call("lab/init", "POST");
@@ -79,6 +80,9 @@ try {
   });
   const id = before.state.snapshot.sessions[0].id;
   const hashes = before.state.snapshot.users.map((u) => u.password_hash);
+  const jwt = await call("jwt/issue", "POST", {
+    email: "sample@example.com", password: "LearnSession!2026", ttl: 300,
+  });
   await stop();
   await start();
   const after = await call("profile");
@@ -88,6 +92,10 @@ try {
     after.state.snapshot.users.map((u) => u.password_hash),
     hashes,
   );
+  const jwtAfter = await call("jwt/profile", "GET", {}, jwt.token);
+  assert.equal(jwtAfter.code, "valid");
+  assert.equal(jwtAfter.keyId, jwt.keyId);
+  console.log("PASS: signing key and issued JWT survive production restart.");
   console.log(
     "PASS: users, hashes, Session and Cookie survive production restart.",
   );
@@ -95,6 +103,7 @@ try {
   await start("dev");
   const dev = await call("profile");
   assert.equal(dev.state.snapshot.sessions[0].id, id);
+  assert.equal((await call("jwt/profile", "GET", {}, jwt.token)).code, "valid");
   console.log(
     "PASS: npm run dev uses the same persisted data and working API.",
   );

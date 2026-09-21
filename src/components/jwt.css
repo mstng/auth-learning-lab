@@ -1,0 +1,58 @@
+.jwt-lab { max-width: 1280px; }
+.jwt-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-bottom:24px; }
+.jwt-toolbar > div, .jwt-part-tabs { display:flex; gap:4px; background:#e7ecef; padding:4px; border-radius:10px; }
+.jwt-lab button:not(.button):not(.text-button), .jwt-lab select { border:1px solid var(--line); border-radius:7px; padding:8px 12px; background:white; color:var(--ink); }
+.jwt-lab button[aria-pressed=true] { background:var(--navy)!important; color:white!important; }
+.jwt-focused { max-width:880px; margin:auto; }
+.jwt-lab .lesson-card { padding:28px 32px; }
+.jwt-welcome, .jwt-complete { text-align:center; }
+.jwt-welcome h2 { font-size:28px; }
+.jwt-welcome small, .jwt-complete label { display:block; }
+.jwt-map { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:20px 0; text-align:center; }
+.jwt-map > div { display:flex; flex-direction:column; align-items:center; border:1px solid var(--line); background:#f8fafb; border-radius:10px; padding:14px 8px; gap:5px; min-width:0; }
+.jwt-map > div[data-current=true] { border-color:var(--teal); box-shadow:inset 0 0 0 1px var(--teal); background:var(--soft); }
+.jwt-map span, .jwt-map small { font-size:11px; color:var(--muted); }
+.jwt-map code { font-size:11px; overflow-wrap:anywhere; }
+.jwt-map > p { grid-column:1/-1; color:var(--muted); font-size:11px; text-align:left; margin:0; }
+.jwt-explanation { background:#f2f8f5; padding:18px; border-radius:10px; margin:16px 0; }
+.jwt-explanation strong, .jwt-explanation small { display:block; margin-bottom:8px; }
+.jwt-explanation p:last-child { margin-bottom:0; }
+.jwt-verdict { font-size:13px; font-weight:600; }
+.jwt-countdown { padding:10px; background:#fff8e7; font-size:14px; }
+.jwt-record { margin-top:20px; border-top:1px solid var(--line); padding-top:15px; font-size:13px; text-align:left; }
+.jwt-record summary, .jwt-parts summary { cursor:pointer; font-weight:600; }
+.jwt-record small { display:block; }
+.jwt-record li { margin:8px 0; }
+.jwt-lab pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; background:#142538; color:#e3eee9; border-radius:9px; padding:15px; max-height:340px; overflow:auto; }
+.jwt-encoded { display:block; overflow-wrap:anywhere; white-space:pre-wrap; font-size:11px; background:#f1f4f6; padding:10px; border-radius:6px; }
+.jwt-parts { text-align:left; margin-top:18px; border:1px solid var(--line); border-radius:10px; padding:16px; }
+.jwt-parts p { font-size:13px; }
+.jwt-part-tabs { margin-bottom:14px; }
+.jwt-part-tabs button { flex:1; min-width:0; }
+.jwt-unverified { color:#8c5717; }
+.jwt-parts dl > div { display:grid; grid-template-columns:50px 1fr; font-size:12px; margin:6px 0; }
+.jwt-parts dd { margin:0; }
+.jwt-complete textarea { display:block; width:100%; min-height:100px; margin:14px 0; padding:12px; font:inherit; border:1px solid var(--line); border-radius:8px; }
+.jwt-inputs { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.jwt-inputs label { display:block; font-size:13px; }
+.jwt-inputs input { display:block; width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px; }
+.jwt-actions { display:flex; flex-wrap:wrap; gap:9px; margin:16px 0; }
+.jwt-free .lesson-card { margin-bottom:18px; }
+.jwt-footer { max-width:880px; margin:20px auto; font-size:12px; color:var(--muted); }
+.jwt-lab table { width:100%; border-collapse:collapse; margin:16px 0; }
+.jwt-lab th, .jwt-lab td { padding:8px; text-align:left; border-bottom:1px solid var(--line); }
+.jwt-lab select { max-width:100%; margin:8px; }
+@media (max-width:600px) {
+  .jwt-lab .lesson-card { padding:20px 14px; }
+  .jwt-lab h1 { font-size:24px; }
+  .jwt-welcome h2 { font-size:23px; }
+  .jwt-map { gap:5px; }
+  .jwt-map > div { padding:10px 3px; }
+  .jwt-map strong { font-size:12px; }
+  .jwt-map span, .jwt-map small, .jwt-map code { font-size:10px; }
+  .jwt-toolbar { gap:8px; }
+  .jwt-lab button:not(.button):not(.text-button) { padding:7px 9px; font-size:12px; }
+  .jwt-inputs { grid-template-columns:1fr; }
+  .jwt-parts { padding:12px; }
+  .jwt-lab .lesson-primary { white-space:normal; }
+}

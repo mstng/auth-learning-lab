@@ -1,6 +1,6 @@
-# Authentication Learning Lab — PHASE 1〜6
+# Authentication Learning Lab — PHASE 1〜7
 
-**実際のPassword認証・Session認証を動かし、HTTP / Cookie / PostgreSQLの変化を観察する学習アプリです。** UIは日本語。目安30〜60分。完成範囲はPHASE 1〜6、基本認可(user/admin)と認証ライフサイクルの検証を含みます。
+**実際のPassword・Session・JWTを動かし、通信・保存場所・検証結果を観察する日本語の学習アプリです。** 完成範囲はPHASE 1〜7。Session編はv1.6のまま、v1.7で予想付きのJWT教材を追加しました。
 
 ## 最短の起動手順（Docker・外部DB不要）
 
@@ -32,6 +32,39 @@ npm start
 
 v1.1では、Node.js内で動く **PGlite（PostgreSQLの組み込み版）** を標準DBにしました。SQL・テーブル・トランザクション・外部キーを使いますが、独立したPostgreSQLサーバーへのTCP通信はありません。画面のProtocol表示も「SQL / PGlite（同一プロセス内）」に変更しています。
 旧Docker版のVolumeからの自動移行はありません。学習用のデータは新規作成されます。複数プロセス・複数サーバー運用向けではなく、個人のローカル学習用です。
+
+## v1.7：JWTを「読む」と「信用する」を分ける（PHASE 7）
+
+`/jwt` を開くと、1画面1問の「順番に学ぶ」から始まります。各問いで予想してから実行し、「まだわからない」でも進めます。点数・合否は付けません。既定は「やさしく」で、技術説明は「詳しく」や折りたたみの実行記録から確認できます。
+
+- **基本3問**：JWT発行 → ブラウザだけでHeader / Payload / Signatureを分解 → 別操作でProfile取得。デコードしたclaimsは未検証と明示します。
+- **失敗5問**：JWT発行 → roleの書換えで署名不一致 → 15秒JWT発行 → 同じJWTを保持して実時間で期限切れ → alg:noneを拒否。
+- **自由に実験する**：発行する利用者・パスワードを変更し、5分／15秒JWT、分解、Profile、role変更、alg:noneを試せます。ガイドの実行記録も見返せます。
+- **実データの観察**：実際のBearerヘッダー、HTTPステータス、joseの検証結果、DBの操作前後、公開鍵を確認できます。再生は追加通信を行いません。
+- **結果から学ぶ**：予想が外れても先へ進めます。通信や観測に失敗した場合、または期待した種類と違う401だった場合は判定を保留します。最後に自分の言葉で説明する任意の振り返り欄があります。
+
+### この教材のJWT方式
+
+署名には **jose / RS256（2048bit）** を使い、APIはRS256だけを許可します。署名とiss / aud / exp / typ、必須claims、学習空間の一致を確認します。必要なclaimsが欠けているトークンも拒否します。
+
+今回のJWTはJWS形式であり、**暗号化ではありません**。HeaderとPayloadは秘密鍵なしで読めます。Signatureは署名のバイト列です。JWTにはJWE形式もありますが、このPHASEでは扱いません。
+
+JWTは**ブラウザの画面内メモリー**に保存し、Authorization: Bearerで送ります。Cookie・localStorage・sessionStorageには保存せず、画面再読み込みで消えます。これは教材の保存方式の選択であり、JWT一般の必須要件ではありません。実行履歴内にも教材用JWTのコピーが残りますが、同様に画面内だけです。
+
+署名鍵は初回のJWT API利用時に生成し、`LAB_DATA_DIR/jwt-signing-key.json`（既定は`data/authlab/jwt-signing-key.json`）に保存します。秘密鍵のファイル権限は0600。秘密鍵はAPI・画面・ログには出さず、Gitにも含めません。再起動しても同じ鍵で検証します。データ移行ではこのファイルも含めて`data/`をコピーしてください。
+
+発行時にはusersの本人確認を行いますが、**JWTごとの有効・無効の記録は作りません**。Profileの利用者属性は検証済みJWTの発行時点の値であり、ユーザーDBの最新状態は再照会しません。教材の学習空間確認・DB観察用のSQLは実行するため、「アプリ全体がDBへ一切アクセスしない」という意味ではありません。
+
+JWTの`exp`は短命のAPIアクセス用トークンの期限（5分／実験用15秒）です。SessionのDB期限やCookie期限とは別物です。OAuthの認可フローやOIDCのID Tokenはまだ実装していません。
+
+### v1.6からの更新
+
+1. 起動中のアプリを停止する。
+2. Git利用時は現在の作業を保存して`git pull --ff-only`。ZIP利用時は新版を別フォルダーに展開し、停止した旧版の`data/`をコピーする。
+3. `npm ci` → `npm run dev`。
+4. 右上の **v1.7** と **JWT認証** の入口を確認する。
+
+DBスキーマの変更やデータ削除はありません。ロードマップの既存チェックも同じ保存キーで引き継ぎ、LEVEL 7のチェックを追加できます。
 
 ## v1.6：保存と一時利用を見分ける
 
@@ -117,7 +150,7 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 2. 新しいZIPを別の場所に展開します。中の `auth-learning-lab`（`package.json` があるフォルダー）をVS Codeで開きます。
 3. 必要なら停止後に旧フォルダーの `data` を新しいフォルダーへコピーします。コピーしなければ新しい学習データで始まります。
 4. VS Codeの「ターミナル → 新しいターミナル」で `npm ci`、続いて `npm run dev` を実行します。
-5. http://localhost:3000 を再読み込みし、右上にv1.6、Session画面に「順番に学ぶ」が表示されることを確認します。
+5. http://localhost:3000 を再読み込みし、右上にv1.7、Session画面に「順番に学ぶ」が表示されることを確認します。
 
 ## デモアカウント
 
@@ -132,12 +165,13 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 
 | URL | 内容 |
 |---|---|
-| / | 全18レベルのロードマップ。1〜6が利用可能、以降は未実装と明示 |
+| / | 全18レベルのロードマップ。1〜7が利用可能、以降は未実装と明示 |
 | /password | Credential、Password照合、bcrypt、Salt、Hash。Sessionを発行しない |
 | /session | 「順番に学ぶ」（予想付きの基本4問・失敗5問・番号を追う図）と「自由に実験する」（全記録・データビューア） |
 | /database | このブラウザーの学習空間のusers/sessions実レコード |
+| /jwt | 予想付き基本3問・失敗5問、JWT分解、実検証、自由実験 |
 
-JWT・OAuth等の未実装画面は存在しません。Architecture/Glossary専用ページはPHASE 18で追加予定。今回の説明はデモ内とこのドキュメントで提供します。
+Session vs JWT比較・OAuth等の未実装画面へのリンクは作りません。Architecture/Glossary専用ページはPHASE 18で追加予定。今回の説明はデモ内とこのドキュメントで提供します。
 
 ## 45分の学習コース
 
@@ -192,7 +226,7 @@ React UI → Next.js Route Handler → Authentication Domain → PGlite（同じ
 - **Resource API**: Profile/Admin。毎回Sessionを検証し、必要なroleを確認。
 - **Database**: users/sessionsの永続化。
 
-今回はAuthentication ServerとResource APIが同じNext.jsプロセスにあり、外部IdPはありません。責務はコード・イベント・画面で区別しています。設計図・Sequence・将来比較設計は [docs/DESIGN.md](docs/DESIGN.md) を参照。
+Authentication ServerとResource APIは同じNext.jsプロセスにあり、外部IdPはありません。責務はコード・イベント・画面で区別しています。設計図・Sequence・将来比較設計は [docs/DESIGN.md](docs/DESIGN.md) を参照。
 
 ## API
 
@@ -207,6 +241,8 @@ React UI → Next.js Route Handler → Authentication Domain → PGlite（同じ
 | POST | /api/lab/expire | 教育操作でDB期限を過去へ。Cookieは変更しない |
 | POST | /api/lab/reset | 自分の学習空間のSessionを全削除 |
 | GET | /api/lab/state | 現在状態・教材DBの観察 |
+| POST | /api/jwt/issue | 実Password照合→RS256署名付きJWT発行。Sessionは作らない |
+| GET | /api/jwt/profile | Bearerの署名・claims検証。成功200、無効401。検証済みの発行時属性を返す |
 
 全APIにX-Lab-Request: 1が必要。POSTはOriginがAPP_ORIGINに完全一致し、Content-Type: application/jsonが必要。ユーザー不存在とPassword不一致は同じエラーにします。
 
@@ -248,7 +284,7 @@ npx playwright install chromium
 npm run verify:portable
 ```
 
-`verify:portable`は納品版と同じPGlite構成を一時ディレクトリーで起動し、ドメイン・HTTP・ブラウザー操作を検証します。さらにアプリを再起動し、users・Password Hash・Sessionが残ること、開発サーバーでも同じデータを読めることを確認します。一時データは終了時に削除されます。普段の学習データには触れません。
+`verify:portable`は納品版と同じPGlite構成を一時ディレクトリーで起動し、ドメイン・HTTP・ブラウザー操作を検証します。さらにアプリを再起動し、users・Password Hash・Session・JWT署名鍵が残ること、同じJWTが本番・開発サーバーで検証できることを確認します。一時データは終了時に削除されます。普段の学習データには触れません。今回と過去の結果は [docs/VERIFICATION.md](docs/VERIFICATION.md) に分けて記録しています。
 
 ブラウザーを省略する場合は `SKIP_BROWSER=true npm run verify:portable`（macOS/Linux）。Windows PowerShellでは `$env:SKIP_BROWSER="true"; npm run verify:portable`。
 
@@ -260,6 +296,7 @@ src/app/             ページ・Route Handler・CSS
 src/components/      Dashboard / Lab / Flow / Inspectors
 src/lib/auth.ts      ユースケースと認証イベント
 src/lib/password.ts  bcryptと入力検証
+src/lib/jwt*.ts      JWT発行・検証・鍵保存・学習の問いと判定
 src/lib/store.ts     PostgreSQL永続化とSession操作
 src/lib/http.ts      Cookie・Origin/Host検証
 src/lib/types.ts     表示とイベントの共通型
@@ -269,18 +306,18 @@ tests/               ドメイン・HTTP・ブラウザーテスト
 scripts/             DB内蔵構成の検証
 ```
 
-## 次のPHASEの位置付け（今回未実装）
+## ロードマップ（PHASE 7のみ今回追加）
 
 | 概念 | 主なポイント | PHASE |
 |---|---|---|
-| JWT | Header/Payload/Signatureを分解。JWSは署名であり暗号化ではない | 7 |
+| JWT（実装済み） | Header/Payload/Signatureを分解。署名・claims・失敗実験 | 7 |
 | Session vs JWT | サーバー側状態と自己完結トークン、失効やスケールのトレードオフ | 8 |
 | Access / Refresh Token | 短命なAPIアクセス証明と更新用資格情報、ローテーション | 9 |
 | OAuth 2.0 | ClientへのAPIアクセス認可委譲。単独では認証規格ではない | 10 |
 | PKCE | verifier/challengeで認可コードと交換要求を結び付ける | 11 |
 | OIDC | OAuth上の本人確認。ID Token、openid、nonce、UserInfo | 12 |
 | OAuth vs OIDC | Access Tokenの用途とClientが検証するID Tokenの違い | 13 |
-| SSO | IdPのSessionとアプリのSessionは別 | 14 |
+| SSO（OIDC / SAML） | IdPと各アプリのSession、SAML AssertionとID Tokenの比較 | 14 |
 | MFA | Password以外の独立した要素を組み合わせる | 15 |
 | Passkey | 端末側の秘密鍵でChallengeに署名、Serverは公開鍵で検証 | 16 |
 | Security Lab | Session Hijacking/Fixation/CSRF/XSS等の閉じたシミュレーション | 17 |
@@ -292,5 +329,7 @@ scripts/             DB内蔵構成の検証
 - [PGlite API](https://pglite.dev/docs/api)
 - [MDN Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
 
-## この納品版の検証結果
-詳細は [docs/VERIFICATION.md](docs/VERIFICATION.md)。ドメイン3件・HTTP統合2件・ブラウザー3件が成功。Dockerは不要です。DB方式変更後の結果を記載しています。
+## 検証
+今回の実行結果と過去の記録は [docs/VERIFICATION.md](docs/VERIFICATION.md) で区別します。`npm run test`、`npm run build`、`npm run typecheck`、`npm run verify:portable`で確認できます。ブラウザ検証には`npx playwright install chromium`が必要です。verify:portableは一時DBを作成し、学習用のdata/を変更しません。
+
+今回の完成範囲はPHASE 7です。次に8、9、10〜11、12〜13を順に実装し、PHASE 13までを目標とします。PHASE 14でSAMLを扱う合意とPHASE 10の参考資料は [docs/ROADMAP.md](docs/ROADMAP.md) に記録しています。

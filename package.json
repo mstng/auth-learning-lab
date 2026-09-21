@@ -1,25 +1,26 @@
 {
   "name": "authentication-learning-lab",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "dev": "node scripts/run.mjs dev",
     "build": "next build --webpack && node scripts/prepare-standalone.mjs",
     "start": "node scripts/run.mjs start",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/domain.test.ts",
-    "test:integration": "node --import tsx --test tests/integration.test.ts",
+    "test": "node --import tsx --test tests/domain.test.ts tests/jwt.test.ts",
+    "test:integration": "node --import tsx --test tests/integration.test.ts tests/jwt-integration.test.ts",
     "test:browser": "playwright test",
     "verify:portable": "node scripts/verify-portable.mjs"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@fontsource-variable/noto-sans-jp": "^5.3.0",
     "bcryptjs": "^3.0.2",
+    "jose": "6.2.12",
     "lucide-react": "^0.468.0",
     "next": "16.3.5",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "@electric-sql/pglite": "^0.5.8"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
