@@ -2254,3 +2254,32 @@ td .hash-cell {
   .travel-packet { font-size:9px; padding:3px 5px; }
 }
 @media(prefers-reduced-motion:reduce) { .travel-packet { animation:none; } }
+
+/* Persistent records and temporary processing use distinct labels and shapes. */
+.place-usage { display:inline-block; border:1px solid #c7d9bf; border-radius:4px; padding:1px 7px; margin-top:6px; font-size:10px; color:#516f43; background:#eff6e8; }
+.place-usage.temporary { border-style:dashed; border-color:#b9cbd9; color:#526b80; background:#f0f5fa; }
+.lesson-node[data-place="server"] > .number-chip { border:1px dashed #9db2c6; background:#edf3f9; color:#4a6279; }
+.server-idle { padding-top:8px; }
+.server-idle > span { display:block; color:#6c7d8b; font-size:12px; line-height:25px; }
+.storage-caption { margin:7px 0 2px; font-size:11px; color:#536b60; }
+.session-mapping { margin-top:9px; }
+.session-mapping dl { display:grid; grid-template-columns:1.05fr .95fr .95fr; gap:3px; margin:0; }
+.session-mapping dl > div { min-width:0; }
+.session-mapping dt { font-size:9px; color:#708174; white-space:nowrap; }
+.session-mapping dd { margin:4px 0; color:#395843; font-size:10px; overflow-wrap:anywhere; }
+.session-mapping .number-chip { margin:0 auto; font-size:10px; padding:0; background:transparent; }
+.session-mapping time { font:10px var(--mono); }
+.lesson-node .session-mapping > small { min-height:0; font-size:10px; margin:5px 0 0; }
+.valid-label { color:#5b794b; }
+@media(max-width:1100px) {
+  .session-mapping dl { grid-template-columns:1fr; gap:5px; }
+  .session-mapping dd { margin:1px 0 0; }
+  .session-mapping dt { font-size:9px; }
+}
+@media(max-width:720px) {
+  .place-usage { font-size:9px; padding:1px 5px; }
+  .session-mapping .number-chip, .session-mapping dd, .session-mapping time { font-size:9px; }
+  .lesson-node .session-mapping > small { font-size:9px; }
+  .server-idle > span { font-size:11px; }
+  .storage-caption { font-size:10px; }
+}

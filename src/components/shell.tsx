@@ -71,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <strong>{nav.find((n) => n[0] === path)?.[1] ?? "Auth Lab"}</strong>
           </span>
           <span className="environment">
-            ローカル実験用 <span className="mono">v1.5</span>
+            ローカル実験用 <span className="mono">v1.6</span>
           </span>
         </header>
         <main>{children}</main>

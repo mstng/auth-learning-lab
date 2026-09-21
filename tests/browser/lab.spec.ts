@@ -199,6 +199,17 @@ test("focused learning shows one question, replays evidence and preserves experi
   await expect(page.locator('.lesson-node[data-current="true"]')).toHaveAttribute("data-place", "database");
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "次へ", exact: true }).click();
   await expect(page.locator(".lesson-explanation")).toContainText("予想との違いを見てみましょう");
+  await expect(page.locator('[data-place="server"] .number-chip')).toHaveCount(0);
+  await expect(page.locator('[data-place="server"]')).toContainText('一時利用');
+  await expect(page.locator('.server-idle')).toContainText('処理終了');
+  await expect(page.locator('[data-place="browser"]')).toContainText('保存');
+  await expect(page.locator('.session-mapping')).toContainText('一般ユーザー');
+  await expect(page.locator('.session-mapping [title="sample@example.com"]')).toHaveCount(1);
+  const observed = await page.evaluate(async () => (await (await fetch('/api/lab/state', { headers: { 'X-Lab-Request': '1' } })).json()).state);
+  const recorded = observed.snapshot.sessions.find((s: { id: string }) => s.id === cookie.value);
+  await expect(page.locator('.session-mapping')).toHaveAttribute('data-user-id', recorded.user_id);
+  await expect(page.locator('.session-mapping time')).toHaveAttribute('datetime', recorded.expires_at);
+  await expect(page.locator('.session-mapping')).toHaveAttribute('data-expired', 'false');
   const comparison = page.getByRole("table").first();
   await expect(comparison).toContainText(cookie.value.slice(0, 10));
   await expect(comparison.locator("tbody tr").first()).toContainText("なし");
@@ -231,8 +242,9 @@ test("focused learning shows one question, replays evidence and preserves experi
   await expect(page.locator(".tour-count")).toHaveText("3 / 4 確認できた");
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "次へ", exact: true }).click();
   await expect(page.locator(".lesson-explanation")).toContainText("両方とも消えました");
+  await expect(page.locator(".session-mapping")).toHaveCount(0);
   await expect(page.locator(".prediction-feedback")).toHaveAttribute("data-outcome", "unknown");
-  await expect(page.locator('.number-chip[data-session-id=""]')).toHaveCount(3);
+  await expect(page.locator('.number-chip[data-session-id=""]')).toHaveCount(2);
   expect((await context.cookies()).some(c => c.name === "lab_session")).toBe(false);
   await expect(page.locator(".lesson-explanation tbody tr").last().locator("td").last()).toHaveText("0件");
   await page.getByRole("button", { name: "次の問いへ", exact: true }).click();
@@ -348,7 +360,7 @@ async function prepareExpiredLesson(page: import('@playwright/test').Page) {
   await readFrames(page, 2);
   await expect(page.locator('.prediction-feedback')).toHaveAttribute('data-outcome', 'different');
   await expect(page.locator('.lesson-explanation')).toContainText('新しい番号もDBのSessionも作られません');
-  await expect(page.locator('.number-chip[data-session-id=""]')).toHaveCount(3);
+  await expect(page.locator('.number-chip[data-session-id=""]')).toHaveCount(2);
   await page.getByRole('button', { name: '次の問いへ', exact: true }).click();
   await page.getByRole('radio', { name: '番号と対応表が作られてログインできる', exact: true }).check();
   await page.getByRole('button', { name: '正しいパスワードでログイン', exact: true }).click();
@@ -370,6 +382,9 @@ test('failure guide traces the same expired number and replaces it after re-logi
   await expect(page.locator('[data-place="browser"] .number-chip')).toHaveAttribute('data-session-id', oldId);
   await expect(page.locator('[data-place="database"] .number-chip')).toHaveAttribute('data-session-id', oldId);
   await expect(page.locator('[data-place="database"]')).toContainText('期限切れの記録');
+  await expect(page.locator('.session-mapping')).toHaveAttribute('data-expired', 'true');
+  await expect(page.locator('.session-mapping')).toContainText('一般ユーザー');
+  await expect(page.locator('[data-place="server"] .number-chip')).toHaveCount(0);
   await page.getByRole('button', { name: '次の問いへ', exact: true }).click();
   await page.getByRole('radio', { name: '同じ番号があるので見られる', exact: true }).check();
   await page.getByRole('button', { name: '期限切れの番号でアクセス', exact: true }).click();
@@ -398,6 +413,8 @@ test('failure guide traces the same expired number and replaces it after re-logi
   await readFrames(page, 4);
   await expect(page.locator('[data-place="browser"] .number-chip')).toHaveAttribute('data-session-id', newId);
   await expect(page.locator('[data-place="database"] .number-chip')).toHaveAttribute('data-session-id', newId);
+  await expect(page.locator('.session-mapping')).toHaveAttribute('data-expired', 'false');
+  await expect(page.locator('[data-place="server"] .number-chip')).toHaveCount(0);
   await expect(page.locator('.lesson-explanation')).toContainText('新しい番号に変わり');
   await page.getByRole('button', { name: '学んだことを振り返る', exact: true }).click();
   await expect(page.locator('.lesson-complete')).toContainText('番号があることと、使えることは別');
