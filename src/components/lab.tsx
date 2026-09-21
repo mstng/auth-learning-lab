@@ -236,7 +236,7 @@ export function Lab({ mode }: { mode: Mode }) {
           </div>
         )}
       </div>
-      {focused ? <GuidedTour records={records} state={state} busy={busy} onRun={action => run(action, action === "login" ? { email: "sample@example.com", password: "LearnSession!2026", ttl: 300 } : undefined)} onExit={() => setLearning(false)} /> : mode === "database" ? (
+      {focused ? <GuidedTour state={state} busy={busy} onRun={action => run(action === "wrong-login" ? "login" : action, action === "login" || action === "wrong-login" ? { email: "sample@example.com", password: action === "wrong-login" ? "WrongPassword!" : "LearnSession!2026", ttl: 300 } : undefined)} onExit={() => setLearning(false)} /> : mode === "database" ? (
         <section className="panel">
           <div className="panel-heading">
             <h2>Database / 現在の状態</h2>

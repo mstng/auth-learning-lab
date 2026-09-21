@@ -2222,3 +2222,35 @@ td .hash-cell {
   .lesson-comparison code { font-size:10px; }
   .lesson-controls + .lesson-note { text-align:left; }
 }
+
+/* Predict, observe and compare — a single question stays in focus. */
+.prediction-choices { border:0; padding:0; margin:0; min-width:0; }
+.prediction-choices legend { font-size:14px; font-weight:600; margin-bottom:9px; }
+.prediction-choices label { display:flex; gap:9px; align-items:center; padding:8px 10px; border:1px solid #dce5dd; border-radius:6px; background:#fff; cursor:pointer; margin:6px 0; font-size:13px; }
+.prediction-choices label:has(:checked) { border-color:#7a9f60; background:#f0f7e7; }
+.prediction-choices input[type="radio"] { width:16px; height:16px; padding:0; flex-shrink:0; accent-color:var(--teal); }
+.prediction-choices > small { color:#697b70; font-size:11px; }
+.prediction-feedback > small { display:block; color:#667b70; font-size:11px; margin-top:5px; }
+.prediction-feedback[data-outcome="different"] .lesson-answer { color:#795c24; }
+.failure-entry { margin:8px auto 0; padding:7px 0; width:auto; }
+.failure-invitation { font-size:14px; background:#f4f8ef; padding:14px; border-radius:7px; }
+.number-map .lesson-diagram { padding:8px 0; }
+.number-chip { display:block; margin:8px auto 4px; padding:4px 3px; background:#e4f1da; color:#355c39; font-size:12px; border-radius:4px; width:max-content; max-width:100%; overflow-wrap:anywhere; }
+.number-chip.empty { background:#edf1f4; color:#82919f; }
+.lesson-node .expired-label { color:#966017; font-weight:600; background:#fff1d7; border-radius:4px; }
+.number-caption { display:block; color:#7b8982; font-size:10px; margin:5px 0; }
+.number-travel { margin:7px 0 3px; }
+.number-travel p { text-align:center; font-size:11px; color:#547667; margin:5px 0; }
+.packet-track { height:27px; position:relative; margin:0 0 7px; }
+.packet-track::before { content:''; position:absolute; top:13px; left:16%; right:16%; border-top:1px dashed #abbe9d; }
+.travel-packet { position:absolute; left:var(--packet-to); top:0; transform:translateX(-50%); background:#dfefc8; border:1px solid #a3be83; padding:3px 8px; border-radius:5px; color:#355b35; font-size:11px; animation:number-travel 1.1s ease-in-out both; }
+@keyframes number-travel { from { left:var(--packet-from); } to { left:var(--packet-to); } }
+@media(max-width:720px) {
+  .prediction-choices label { font-size:12px; padding:9px 7px; }
+  .number-chip { font-size:9px; padding:4px 2px; }
+  .number-map .lesson-node small { min-height:30px; }
+  .number-map .lesson-node { padding-top:10px; }
+  .number-travel p, .number-caption { font-size:9px; }
+  .travel-packet { font-size:9px; padding:3px 5px; }
+}
+@media(prefers-reduced-motion:reduce) { .travel-packet { animation:none; } }

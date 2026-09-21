@@ -8,5 +8,5 @@ playwright-report/
 data/
 
 # 版を移行したときの旧学習データの退避先
+# ※Codexが配る新版で .gitignore ごと上書きされるので、取り込みのたびに再追加する
 data.bak-*/
-.DS_Store
