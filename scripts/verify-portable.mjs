@@ -68,8 +68,8 @@ async function call(path, method = "GET", body = {}, token) {
 }
 try {
   await start();
-  await run(["--import", "tsx", "--test", "tests/domain.test.ts", "tests/jwt.test.ts"]);
-  await run(["--import", "tsx", "--test", "tests/integration.test.ts", "tests/jwt-integration.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/domain.test.ts", "tests/jwt.test.ts", "tests/compare.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/integration.test.ts", "tests/jwt-integration.test.ts", "tests/compare-integration.test.ts"]);
   if (process.env.SKIP_BROWSER !== "true")
     await run(["node_modules/@playwright/test/cli.js", "test"]);
   await call("lab/init", "POST");

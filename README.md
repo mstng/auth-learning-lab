@@ -1,6 +1,6 @@
-# Authentication Learning Lab — PHASE 1〜7
+# Authentication Learning Lab — PHASE 1〜8
 
-**実際のPassword・Session・JWTを動かし、通信・保存場所・検証結果を観察する日本語の学習アプリです。** 完成範囲はPHASE 1〜7。Session編はv1.6のまま、v1.7で予想付きのJWT教材を追加しました。
+**実際のPassword・Session・JWTを動かし、通信・保存場所・検証結果を観察する日本語の学習アプリです。** 完成範囲はPHASE 1〜8。v1.8でSessionとJWTのログアウト後の再利用を比べる教材を追加しました。Session編・JWT編の既存の操作と説明は維持しています。
 
 ## 最短の起動手順（Docker・外部DB不要）
 
@@ -33,6 +33,37 @@ npm start
 v1.1では、Node.js内で動く **PGlite（PostgreSQLの組み込み版）** を標準DBにしました。SQL・テーブル・トランザクション・外部キーを使いますが、独立したPostgreSQLサーバーへのTCP通信はありません。画面のProtocol表示も「SQL / PGlite（同一プロセス内）」に変更しています。
 旧Docker版のVolumeからの自動移行はありません。学習用のデータは新規作成されます。複数プロセス・複数サーバー運用向けではなく、個人のローカル学習用です。
 
+## v1.8：ログアウト後のコピーを再送する（PHASE 8）
+
+`/compare`（メニュー「SessionとJWTの比較」）で、予想→実行→記録の読み返しを6問で進めます。「まだわからない」も選べ、点数や合否は付けません。既定は「やさしく」。自由実験は別画面に切り替えます。
+
+1. **どこに残る？** 同じ利用者のSessionとJWTを実際に発行。SessionのDB記録と、JWTの署名付き情報を比較。
+2. **何で判断する？** 発行とは別操作でProfileを取得。Sessionは現在のDB状態、JWTは検証済みの発行時属性。
+3. **ログアウトで何が変わる？** SessionのCookieとDB行を削除。JWTは画面の通常利用用の値を手放す。
+4. **コピーは使える？** ログアウト前に控えた同一の値を実際に再送。Sessionは記録なしで401、JWTは期限内なら200。
+5. **あるJWTだけを今すぐ止めるには？** 説明モデルで失効リストの有無を切り替え、状態の保存・照会が増えることを考える。
+6. **検証サーバーが2台になったら？** 説明モデルでSession／JWT／JWT＋失効リストを切り替え、共有ストア・鍵と検証条件・更新反映の違いを考える。
+
+### 実際に起きることと、説明モデルの境界
+
+- **最初の4問は実測**。既存のlogin / profile / logoutとJWT APIを使用します。発行実験では現在のSessionを新しいSessionに置き換えることを、実行前に明示します。DBスキーマ・利用者・ロードマップの進捗は変更しません。
+- **実験用コピーは意図的に残します**。Session IDは教材APIが返す観測値から控え、HttpOnly CookieをJavaScriptで読み取るわけではありません。JWTの通常利用用の保持を解除しても、実験用コピーと履歴は画面内に残ります。再読み込みですべて消えます。永続ストレージには保存しません。
+- **Sessionのコピー再送は専用APIのJSON本文**。ブラウザのCookieを復活させず、既存Sessionと同じPGlite・照合関数・期限判定・利用者状態で確認します。JWTは既存Profile APIへ同じBearerを送ります。通信記録に架空のCookie再送は表示しません。
+- **最後の2問は説明モデル**。失効リストや複数サーバーは実装・起動していません。モデルの切り替えはAPI・DBに影響しません。実測のHTTP結果や性能として表示しません。
+- JWTが期限切れになっていれば200にはならず、想定した比較の確認を保留します。発行からやり直せます。操作後の観測だけが失敗した場合は、操作を繰り返さず観測だけを再試行します。
+- 図の配置・強調は説明モデル、表示するCookie・Session行数・送信値は選択した操作の実記録です。履歴を見返しても現在の状態は戻りません。
+
+この構成ではJWTごとの有効状態を保存しませんが、JWT一般が失効不能という意味ではありません。個別の即時失効には失効リスト等の状態確認を追加できます。Sessionも共有ストアでスケールできます。方式の優劣を一律に決めず、照会負荷・鍵配布・失効情報の反映遅延などの条件から判断します。PGliteの本教材は単一Nodeプロセスであり、分散運用の実測ではありません。
+
+### v1.7からの更新
+
+1. 起動中のアプリを停止し、現在の作業を保存する。
+2. Git利用時は`git pull --ff-only`。ZIPで移行する場合は新版を別フォルダーに置き、停止した旧版の`data/`をそのままコピーする（JWT署名鍵も含む）。
+3. `npm ci` → `npm run dev`。
+4. 右上の**v1.8**と**SessionとJWTの比較**の入口を確認する。
+
+学習データの削除やDB移行は不要です。既存のignoreルール（`data/`・`data.bak-*/`）を維持しています。
+
 ## v1.7：JWTを「読む」と「信用する」を分ける（PHASE 7）
 
 `/jwt` を開くと、1画面1問の「順番に学ぶ」から始まります。各問いで予想してから実行し、「まだわからない」でも進めます。点数・合否は付けません。既定は「やさしく」で、技術説明は「詳しく」や折りたたみの実行記録から確認できます。
@@ -62,7 +93,7 @@ JWTの`exp`は短命のAPIアクセス用トークンの期限（5分／実験�
 1. 起動中のアプリを停止する。
 2. Git利用時は現在の作業を保存して`git pull --ff-only`。ZIP利用時は新版を別フォルダーに展開し、停止した旧版の`data/`をコピーする。
 3. `npm ci` → `npm run dev`。
-4. 右上の **v1.7** と **JWT認証** の入口を確認する。
+4. 右上の **v1.8** と **JWT認証** の入口を確認する（v1.8では比較教材も追加）。
 
 DBスキーマの変更やデータ削除はありません。ロードマップの既存チェックも同じ保存キーで引き継ぎ、LEVEL 7のチェックを追加できます。
 
@@ -150,7 +181,7 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 2. 新しいZIPを別の場所に展開します。中の `auth-learning-lab`（`package.json` があるフォルダー）をVS Codeで開きます。
 3. 必要なら停止後に旧フォルダーの `data` を新しいフォルダーへコピーします。コピーしなければ新しい学習データで始まります。
 4. VS Codeの「ターミナル → 新しいターミナル」で `npm ci`、続いて `npm run dev` を実行します。
-5. http://localhost:3000 を再読み込みし、右上にv1.7、Session画面に「順番に学ぶ」が表示されることを確認します。
+5. http://localhost:3000 を再読み込みし、右上にv1.8、Session画面に「順番に学ぶ」が表示されることを確認します。
 
 ## デモアカウント
 
@@ -165,13 +196,14 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 
 | URL | 内容 |
 |---|---|
-| / | 全18レベルのロードマップ。1〜7が利用可能、以降は未実装と明示 |
+| / | 全18レベルのロードマップ。1〜8が利用可能、以降は未実装と明示 |
 | /password | Credential、Password照合、bcrypt、Salt、Hash。Sessionを発行しない |
 | /session | 「順番に学ぶ」（予想付きの基本4問・失敗5問・番号を追う図）と「自由に実験する」（全記録・データビューア） |
 | /database | このブラウザーの学習空間のusers/sessions実レコード |
 | /jwt | 予想付き基本3問・失敗5問、JWT分解、実検証、自由実験 |
+| /compare | SessionとJWTの比較。実測4問・設計モデル2問、コピー再送、自由実験 |
 
-Session vs JWT比較・OAuth等の未実装画面へのリンクは作りません。Architecture/Glossary専用ページはPHASE 18で追加予定。今回の説明はデモ内とこのドキュメントで提供します。
+Refresh Token・OAuth等の未実装画面へのリンクは作りません。Architecture/Glossary専用ページはPHASE 18で追加予定。今回の説明はデモ内とこのドキュメントで提供します。
 
 ## 45分の学習コース
 
@@ -243,6 +275,7 @@ Authentication ServerとResource APIは同じNext.jsプロセスにあり、外�
 | GET | /api/lab/state | 現在状態・教材DBの観察 |
 | POST | /api/jwt/issue | 実Password照合→RS256署名付きJWT発行。Sessionは作らない |
 | GET | /api/jwt/profile | Bearerの署名・claims検証。成功200、無効401。検証済みの発行時属性を返す |
+| POST | /api/compare/session-replay | JSONのsessionIdを同じ学習空間の実DBで照合。Cookieは変更しない。成功200、記録なし／期限切れ／利用者無効は401 |
 
 全APIにX-Lab-Request: 1が必要。POSTはOriginがAPP_ORIGINに完全一致し、Content-Type: application/jsonが必要。ユーザー不存在とPassword不一致は同じエラーにします。
 
@@ -297,6 +330,7 @@ src/components/      Dashboard / Lab / Flow / Inspectors
 src/lib/auth.ts      ユースケースと認証イベント
 src/lib/password.ts  bcryptと入力検証
 src/lib/jwt*.ts      JWT発行・検証・鍵保存・学習の問いと判定
+src/lib/compare*.ts  比較のAPI呼出し・問い・観測値の一致確認
 src/lib/store.ts     PostgreSQL永続化とSession操作
 src/lib/http.ts      Cookie・Origin/Host検証
 src/lib/types.ts     表示とイベントの共通型
@@ -306,12 +340,12 @@ tests/               ドメイン・HTTP・ブラウザーテスト
 scripts/             DB内蔵構成の検証
 ```
 
-## ロードマップ（PHASE 7のみ今回追加）
+## ロードマップ（PHASE 8のみ今回追加）
 
 | 概念 | 主なポイント | PHASE |
 |---|---|---|
 | JWT（実装済み） | Header/Payload/Signatureを分解。署名・claims・失敗実験 | 7 |
-| Session vs JWT | サーバー側状態と自己完結トークン、失効やスケールのトレードオフ | 8 |
+| Session vs JWT（実装済み） | ログアウト後の実再送比較、即時失効・増設の説明モデル | 8 |
 | Access / Refresh Token | 短命なAPIアクセス証明と更新用資格情報、ローテーション | 9 |
 | OAuth 2.0 | ClientへのAPIアクセス認可委譲。単独では認証規格ではない | 10 |
 | PKCE | verifier/challengeで認可コードと交換要求を結び付ける | 11 |
@@ -332,4 +366,4 @@ scripts/             DB内蔵構成の検証
 ## 検証
 今回の実行結果と過去の記録は [docs/VERIFICATION.md](docs/VERIFICATION.md) で区別します。`npm run test`、`npm run build`、`npm run typecheck`、`npm run verify:portable`で確認できます。ブラウザ検証には`npx playwright install chromium`が必要です。verify:portableは一時DBを作成し、学習用のdata/を変更しません。
 
-今回の完成範囲はPHASE 7です。次に8、9、10〜11、12〜13を順に実装し、PHASE 13までを目標とします。PHASE 14でSAMLを扱う合意とPHASE 10の参考資料は [docs/ROADMAP.md](docs/ROADMAP.md) に記録しています。
+今回の追加範囲はPHASE 8です。次に9、10〜11、12〜13を順に実装し、PHASE 13までを目標とします。PHASE 14でSAMLを扱う合意とPHASE 10の参考資料は [docs/ROADMAP.md](docs/ROADMAP.md) に記録しています。

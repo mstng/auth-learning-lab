@@ -1,3 +1,9 @@
+# v1.8 PHASE 8 SessionとJWTの比較
+
+`/compare`で発行・Profile・ログアウト・コピー再送を比較する。設計は[ADR 006](adr/006-session-jwt-comparison.md)。既存の認証処理を維持し、Cookieを偽装しない実験用Session再送APIのみ追加。失効リスト・複数サーバーは未実装の説明モデルとして区別する。以下は各版時点の設計記録。
+
+---
+
 # v1.7 PHASE 7 JWT
 
 `/jwt`に独立した教材を追加。設計判断は[ADR 005](adr/005-jwt-learning.md)。JWTのドメイン、鍵保存、HTTP境界、学習判定、UIを分離し、既存のSession実装は維持する。以下は各版作成時点の設計記録。

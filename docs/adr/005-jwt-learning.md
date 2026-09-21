@@ -15,3 +15,5 @@
 - PHASE 8のログアウト再送比較、PHASE 9のRefresh Token、PHASE 10以降のOAuth/OIDCは未実装。
 
 参考: https://github.com/panva/jose 、https://www.rfc-editor.org/rfc/rfc8725 、https://www.rfc-editor.org/rfc/rfc7519
+
+v1.8でPHASE 8の比較を追加。[ADR 006](006-session-jwt-comparison.md)を参照。このADRはv1.7時点のJWT設計を記録している。
