@@ -17,3 +17,4 @@ data.bak-*/
 *.pem
 *.key
 jwt-signing-key.json
+.vercel
