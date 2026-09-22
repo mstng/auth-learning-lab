@@ -9,11 +9,27 @@ import type { Snapshot, User, Session } from "./types";
 const runtime = globalThis as unknown as {
   authLabEmbeddedDb?: Promise<PGlite>;
 };
+/**
+ * DBをメモリ上だけで動かすか。
+ *
+ * Vercel などのサーバーレス環境はファイルシステムに書き込めないため、
+ * LAB_MEMORY_DB=true でメモリ動作に切り替える。
+ * 学習空間は使い捨てでよく、消えても最初からやり直せる。
+ * ローカルでは未設定のままにして、進捗をファイルに残す。
+ */
+const useMemoryDb = process.env.LAB_MEMORY_DB === "true";
+
 export async function database(): Promise<PGlite> {
   runtime.authLabEmbeddedDb ??= (async () => {
-    const dir = resolve(process.env.LAB_DATA_DIR ?? "./data/authlab");
-    await mkdir(dir, { recursive: true });
-    const db = await PGlite.create(dir);
+    // 保存先を渡さなければメモリ上に作られる
+    let db: PGlite;
+    if (useMemoryDb) {
+      db = await PGlite.create();
+    } else {
+      const dir = resolve(process.env.LAB_DATA_DIR ?? "./data/authlab");
+      await mkdir(dir, { recursive: true });
+      db = await PGlite.create(dir);
+    }
     try {
       await db.exec(await readFile(`${process.cwd()}/db/schema.sql`, "utf8"));
     } catch (error) {

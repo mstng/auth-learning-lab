@@ -3,6 +3,11 @@ const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
+  // db/schema.sql は実行時に readFile で読むため、静的解析では検出されない。
+  // 明示的に同梱しないとサーバーレス環境で ENOENT になる。
+  outputFileTracingIncludes: {
+    "/api/**": ["./db/schema.sql"],
+  },
   async headers() {
     return [
       {
