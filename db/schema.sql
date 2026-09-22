@@ -31,3 +31,18 @@ CREATE TABLE IF NOT EXISTS authorization_codes (
  expires_at timestamptz NOT NULL,
  FOREIGN KEY (lab_id,user_id) REFERENCES users(lab_id,id) ON DELETE CASCADE
 );
+
+-- PHASE 9: additive migration. Preserve existing users, sessions and reserved tables.
+CREATE TABLE IF NOT EXISTS refresh_families (
+ id text PRIMARY KEY, lab_id text NOT NULL REFERENCES lab_spaces(id) ON DELETE CASCADE,
+ user_id text NOT NULL, expires_at timestamptz NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(), revoked_at timestamptz, revoke_reason text,
+ FOREIGN KEY (lab_id,user_id) REFERENCES users(lab_id,id) ON DELETE CASCADE
+);
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS family_id text REFERENCES refresh_families(id) ON DELETE CASCADE;
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS generation integer NOT NULL DEFAULT 1 CHECK (generation > 0);
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS used_at timestamptz;
+ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+CREATE UNIQUE INDEX IF NOT EXISTS refresh_hash_idx ON refresh_tokens(lab_id,token_hash) WHERE family_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS refresh_generation_idx ON refresh_tokens(family_id,generation) WHERE family_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS refresh_family_lab_idx ON refresh_families(lab_id);

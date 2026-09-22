@@ -46,7 +46,7 @@ async function run(args) {
   assert.equal(code, 0, `Failed: ${args.join(" ")}`);
 }
 const jar = new Map();
-async function call(path, method = "GET", body = {}, token) {
+async function call(path, method = "GET", body = {}, token, expectedStatus = 200) {
   const res = await fetch(`${origin}/api/${path}`, {
     method,
     headers: {
@@ -63,13 +63,13 @@ async function call(path, method = "GET", body = {}, token) {
     const i = pair.indexOf("=");
     jar.set(pair.slice(0, i), pair.slice(i + 1));
   }
-  assert.equal(res.status, 200);
+  assert.equal(res.status, expectedStatus);
   return res.json();
 }
 try {
   await start();
-  await run(["--import", "tsx", "--test", "tests/domain.test.ts", "tests/jwt.test.ts", "tests/compare.test.ts"]);
-  await run(["--import", "tsx", "--test", "tests/integration.test.ts", "tests/jwt-integration.test.ts", "tests/compare-integration.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/domain.test.ts", "tests/jwt.test.ts", "tests/compare.test.ts", "tests/tokens.test.ts"]);
+  await run(["--import", "tsx", "--test", "tests/integration.test.ts", "tests/jwt-integration.test.ts", "tests/compare-integration.test.ts", "tests/tokens-integration.test.ts"]);
   if (process.env.SKIP_BROWSER !== "true")
     await run(["node_modules/@playwright/test/cli.js", "test"]);
   await call("lab/init", "POST");
@@ -81,6 +81,9 @@ try {
   const id = before.state.snapshot.sessions[0].id;
   const hashes = before.state.snapshot.users.map((u) => u.password_hash);
   const jwt = await call("jwt/issue", "POST", {
+    email: "sample@example.com", password: "LearnSession!2026", ttl: 300,
+  });
+  const tokens = await call("tokens/issue", "POST", {
     email: "sample@example.com", password: "LearnSession!2026", ttl: 300,
   });
   await stop();
@@ -95,6 +98,12 @@ try {
   const jwtAfter = await call("jwt/profile", "GET", {}, jwt.token);
   assert.equal(jwtAfter.code, "valid");
   assert.equal(jwtAfter.keyId, jwt.keyId);
+  const renewed = await call("tokens/refresh", "POST", { refreshToken: tokens.pair.refreshToken });
+  assert.equal(renewed.pair.familyId, tokens.pair.familyId);
+  assert.equal(renewed.pair.generation, 2);
+  assert.equal(renewed.pair.refreshExpiresAt, tokens.pair.refreshExpiresAt);
+  assert.equal(renewed.after.tokens.find(t => t.id === tokens.pair.refreshId).used_at !== null, true);
+  console.log("PASS: Refresh hash/family survive restart and rotate with the original expiry.");
   console.log("PASS: signing key and issued JWT survive production restart.");
   console.log(
     "PASS: users, hashes, Session and Cookie survive production restart.",
@@ -104,6 +113,13 @@ try {
   const dev = await call("profile");
   assert.equal(dev.state.snapshot.sessions[0].id, id);
   assert.equal((await call("jwt/profile", "GET", {}, jwt.token)).code, "valid");
+  const third = await call("tokens/refresh", "POST", { refreshToken: renewed.pair.refreshToken });
+  assert.equal(third.pair.generation, 3);
+  const replay = await call("tokens/refresh", "POST", { refreshToken: tokens.pair.refreshToken }, undefined, 401);
+  assert.equal(replay.code, "reused");
+  assert.equal((await call("tokens/refresh", "POST", { refreshToken: third.pair.refreshToken }, undefined, 401)).code, "revoked");
+  assert.equal((await call("tokens/profile", "GET", {}, third.pair.accessToken)).code, "valid");
+  console.log("PASS: used Refresh generations persist into dev; replay revokes descendants, not issued Access.");
   console.log(
     "PASS: npm run dev uses the same persisted data and working API.",
   );

@@ -1,6 +1,6 @@
-# Authentication Learning Lab — PHASE 1〜8
+# Authentication Learning Lab — PHASE 1〜9
 
-**実際のPassword・Session・JWTを動かし、通信・保存場所・検証結果を観察する日本語の学習アプリです。** 完成範囲はPHASE 1〜8。v1.8でSessionとJWTのログアウト後の再利用を比べる教材を追加しました。Session編・JWT編の既存の操作と説明は維持しています。
+**実際のPassword・Session・JWTを動かし、通信・保存場所・検証結果を観察する日本語の学習アプリです。** 完成範囲はPHASE 1〜9。v1.9でAccess / Refresh Tokenの期限切れ・更新・再利用検知を体験する教材を追加しました。Session・JWT・比較編の既存の操作は維持しています。
 
 ## 最短の起動手順（Docker・外部DB不要）
 
@@ -32,6 +32,41 @@ npm start
 
 v1.1では、Node.js内で動く **PGlite（PostgreSQLの組み込み版）** を標準DBにしました。SQL・テーブル・トランザクション・外部キーを使いますが、独立したPostgreSQLサーバーへのTCP通信はありません。画面のProtocol表示も「SQL / PGlite（同一プロセス内）」に変更しています。
 旧Docker版のVolumeからの自動移行はありません。学習用のデータは新規作成されます。複数プロセス・複数サーバー運用向けではなく、個人のローカル学習用です。
+
+## v1.9：短命なAccessをRefreshで更新する（PHASE 9）
+
+`/tokens`（メニュー「AccessとRefresh」）を開きます。**予想→実際の結果→図の証拠→理由**の8問。「まだわからない」も選べ、採点はありません。やさしい説明が既定で、HTTPステータス・期限の日本時間表示・系列IDは「詳しく」、送信値とDB前後は折りたたみから確認できます。
+
+1. **2種類を発行**：最初のAccessは実験用15秒、Refreshは30分。DBには更新用のハッシュ・系列・世代を記録。
+2. **送る先を間違える**：RefreshをProfileのBearerで送ると拒否。
+3. **同じAccessの自然失効**：実時間で15秒の期限を待って送ると401。Refreshを持っているだけでは自動更新されない。
+4. **Refreshで更新**：パスワードなしの別リクエストで新しいAccess（5分）とRefreshを発行。古いRefreshは使用済みに。
+5. **新しいAccessでProfile取得**：更新とは別操作で200を確認。
+6. **古いRefreshを再送**：再利用を検知し、同じToken Family全体の更新を停止。
+7. **最新Refreshで更新**：新しい世代でも、系列が停止済みなので401。
+8. **発行済みAccessを再送**：この構成では、期限内の同じAccessは200。「更新を止める」と「今あるAccessを即座に止める」の違いを確認。
+
+### 保存・期限・実測の境界
+
+- Accessは既存jose / RS256を使用し、アルゴリズム・iss・aud・exp・typなどを検証。個別の有効状態はDBに保存しません。
+- Refreshは256bitの不透明な乱数。DBには標準SHA-256のハッシュを保存し、平文を保存しません。ローテーションでは使用済み化と新規発行を同一トランザクションで実施。署名失敗時にはDB変更も取り消します。
+- Refreshは**初回発行から30分の絶対期限**で、更新しても延長しません。Accessの15秒／5分、既存Sessionの期限とは別です。
+- 再利用検知は「第三者を特定できた」という意味ではありません。正規クライアントの同時更新や、応答が届かなかった後の再送でも検知され得ます。結果不明の場合は成功扱いせず、自動再送もしません。
+- 2種類の平文、古いRefreshの実験用コピー、操作履歴は**画面内メモリーだけ**。Cookie/localStorage/sessionStorageには保存しません。本番の保存方式の推奨ではありません。リロードで画面内の値は消えますが、DBの系列は残ります。新しく発行すると別系列になります。
+- 自由実験では**系列の手動停止**と**DBの更新期限を過去にする操作**も可能。後者は実DBを変更する教育操作で、自然失効とは明確に分けます。ブラウザのコピーは再送実験のため残します。
+- 図の配置・強調は説明用、表示値とDB状態は選択した操作の実記録です。記録の読み返しはAPIを再実行せず、現在のトークンを履歴の値に戻しません。既存Database ViewerのRefresh欄も実記録を表示します。
+- 初回はサンプル利用者のパスワードを実照合する教材専用APIです。**OAuthの認可フロー、Password Grant、ID Tokenは実装していません**。OAuthのクライアント・同意・scopeは次のPHASEです。
+
+### v1.8以前から最新版への更新
+
+1. 起動中のアプリを停止し、現在の作業を保存する。
+2. Gitの場合は`git pull --ff-only`。ZIPの場合は新版を別フォルダーに展開し、旧版の`data/`を署名鍵ごとコピーする。
+3. `npm ci` → `npm run dev`。
+4. 右上の**v1.9**と**AccessとRefresh**の入口を確認する。
+
+初回DBアクセスで新しいテーブル・列・インデックスを追加します。**data/の削除や手動リセットは不要**です。既存users・Session・署名鍵・ロードマップのチェックを保持します。`data/`・`data.bak-*/`等のignoreルールも維持しています。
+
+以下のv1.8以前の節は各版で追加した機能の記録です。最新版への更新は上の手順を使ってください。
 
 ## v1.8：ログアウト後のコピーを再送する（PHASE 8）
 
@@ -181,7 +216,7 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 2. 新しいZIPを別の場所に展開します。中の `auth-learning-lab`（`package.json` があるフォルダー）をVS Codeで開きます。
 3. 必要なら停止後に旧フォルダーの `data` を新しいフォルダーへコピーします。コピーしなければ新しい学習データで始まります。
 4. VS Codeの「ターミナル → 新しいターミナル」で `npm ci`、続いて `npm run dev` を実行します。
-5. http://localhost:3000 を再読み込みし、右上にv1.8、Session画面に「順番に学ぶ」が表示されることを確認します。
+5. http://localhost:3000 を再読み込みし、右上にv1.9、Session画面に「順番に学ぶ」が表示されることを確認します。
 
 ## デモアカウント
 
@@ -202,6 +237,7 @@ Session画面の「順番に学ぶ」で **「5分ガイドを始める」** を
 | /database | このブラウザーの学習空間のusers/sessions実レコード |
 | /jwt | 予想付き基本3問・失敗5問、JWT分解、実検証、自由実験 |
 | /compare | SessionとJWTの比較。実測4問・設計モデル2問、コピー再送、自由実験 |
+| /tokens | Access / Refresh。実験8問、更新・再利用検知・手動停止・DB期限変更 |
 
 Refresh Token・OAuth等の未実装画面へのリンクは作りません。Architecture/Glossary専用ページはPHASE 18で追加予定。今回の説明はデモ内とこのドキュメントで提供します。
 
@@ -276,6 +312,12 @@ Authentication ServerとResource APIは同じNext.jsプロセスにあり、外�
 | POST | /api/jwt/issue | 実Password照合→RS256署名付きJWT発行。Sessionは作らない |
 | GET | /api/jwt/profile | Bearerの署名・claims検証。成功200、無効401。検証済みの発行時属性を返す |
 | POST | /api/compare/session-replay | JSONのsessionIdを同じ学習空間の実DBで照合。Cookieは変更しない。成功200、記録なし／期限切れ／利用者無効は401 |
+| POST | /api/tokens/issue | 実Password照合→Access JWT / Refresh発行。Sessionを変更しない |
+| GET | /api/tokens/profile | Accessの署名・claimsを検証。Refresh停止状態による即時失効はしない |
+| POST | /api/tokens/refresh | ハッシュ照合→使用済み化＋新規発行。再利用なら系列全体を停止 |
+| POST | /api/tokens/revoke | 指定Refreshの系列を停止。Accessの署名・期限は変えない |
+| POST | /api/tokens/expire | 実験用に指定系列のDB期限だけを過去へ変更 |
+| GET | /api/tokens/state | 同じ学習空間のRefresh Family・世代・ハッシュを実観察 |
 
 全APIにX-Lab-Request: 1が必要。POSTはOriginがAPP_ORIGINに完全一致し、Content-Type: application/jsonが必要。ユーザー不存在とPassword不一致は同じエラーにします。
 
@@ -286,7 +328,8 @@ Authentication ServerとResource APIは同じNext.jsプロセスにあり、外�
 | lab_spaces | id, created_at | ブラウザーごとの学習空間 |
 | users | id, lab_id, email, password_hash, role, status, created_at | bcrypt Cost 12 |
 | sessions | id, lab_id, user_id, expires_at, created_at | 256bitランダムID、絶対期限 |
-| refresh_tokens | id, lab_id, user_id, token_hash, expires_at, revoked_at | 空の予約スキーマ |
+| refresh_families | id, lab_id, user_id, expires_at, revoked_at, revoke_reason | 更新系列の期限と停止状態 |
+| refresh_tokens | id, lab_id, user_id, family_id, generation, token_hash, expires_at, used_at, revoked_at | 各世代のハッシュと使用／停止状態 |
 | oauth_clients | client_id, lab_id, client_name, redirect_uri | 空の予約スキーマ |
 | authorization_codes | code, lab_id, client_id, user_id, expires_at | 空の予約スキーマ |
 
@@ -317,7 +360,7 @@ npx playwright install chromium
 npm run verify:portable
 ```
 
-`verify:portable`は納品版と同じPGlite構成を一時ディレクトリーで起動し、ドメイン・HTTP・ブラウザー操作を検証します。さらにアプリを再起動し、users・Password Hash・Session・JWT署名鍵が残ること、同じJWTが本番・開発サーバーで検証できることを確認します。一時データは終了時に削除されます。普段の学習データには触れません。今回と過去の結果は [docs/VERIFICATION.md](docs/VERIFICATION.md) に分けて記録しています。
+`verify:portable`は納品版と同じPGlite構成を一時ディレクトリーで起動し、ドメイン・HTTP・ブラウザー操作を検証します。さらにアプリを再起動し、users・Password Hash・Session・JWT署名鍵が残ること、同じJWTが本番・開発サーバーで検証できることを確認します。Refreshのハッシュ・系列・使用履歴の永続化、再起動後の更新と再利用検知も確かめます。一時データは終了時に削除されます。普段の学習データには触れません。今回と過去の結果は [docs/VERIFICATION.md](docs/VERIFICATION.md) に分けて記録しています。
 
 ブラウザーを省略する場合は `SKIP_BROWSER=true npm run verify:portable`（macOS/Linux）。Windows PowerShellでは `$env:SKIP_BROWSER="true"; npm run verify:portable`。
 
@@ -331,6 +374,8 @@ src/lib/auth.ts      ユースケースと認証イベント
 src/lib/password.ts  bcryptと入力検証
 src/lib/jwt*.ts      JWT発行・検証・鍵保存・学習の問いと判定
 src/lib/compare*.ts  比較のAPI呼出し・問い・観測値の一致確認
+src/lib/tokens*.ts   Access / Refreshの型・API呼出し・学習判定
+src/lib/refresh-store.ts  Refresh発行・ローテーション・系列停止
 src/lib/store.ts     PostgreSQL永続化とSession操作
 src/lib/http.ts      Cookie・Origin/Host検証
 src/lib/types.ts     表示とイベントの共通型
@@ -340,13 +385,13 @@ tests/               ドメイン・HTTP・ブラウザーテスト
 scripts/             DB内蔵構成の検証
 ```
 
-## ロードマップ（PHASE 8のみ今回追加）
+## ロードマップ（PHASE 9のみ今回追加）
 
 | 概念 | 主なポイント | PHASE |
 |---|---|---|
 | JWT（実装済み） | Header/Payload/Signatureを分解。署名・claims・失敗実験 | 7 |
 | Session vs JWT（実装済み） | ログアウト後の実再送比較、即時失効・増設の説明モデル | 8 |
-| Access / Refresh Token | 短命なAPIアクセス証明と更新用資格情報、ローテーション | 9 |
+| Access / Refresh Token（実装済み） | 期限切れ・ローテーション・再利用検知・系列停止を実測 | 9 |
 | OAuth 2.0 | ClientへのAPIアクセス認可委譲。単独では認証規格ではない | 10 |
 | PKCE | verifier/challengeで認可コードと交換要求を結び付ける | 11 |
 | OIDC | OAuth上の本人確認。ID Token、openid、nonce、UserInfo | 12 |
@@ -366,4 +411,4 @@ scripts/             DB内蔵構成の検証
 ## 検証
 今回の実行結果と過去の記録は [docs/VERIFICATION.md](docs/VERIFICATION.md) で区別します。`npm run test`、`npm run build`、`npm run typecheck`、`npm run verify:portable`で確認できます。ブラウザ検証には`npx playwright install chromium`が必要です。verify:portableは一時DBを作成し、学習用のdata/を変更しません。
 
-今回の追加範囲はPHASE 8です。次に9、10〜11、12〜13を順に実装し、PHASE 13までを目標とします。PHASE 14でSAMLを扱う合意とPHASE 10の参考資料は [docs/ROADMAP.md](docs/ROADMAP.md) に記録しています。
+今回の追加範囲はPHASE 9です。次に10〜11、12〜13を順に実装し、PHASE 13までを目標とします。PHASE 14でSAMLを扱う合意とPHASE 10の参考資料は [docs/ROADMAP.md](docs/ROADMAP.md) に記録しています。

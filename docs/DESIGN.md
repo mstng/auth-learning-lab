@@ -1,3 +1,9 @@
+# v1.9 PHASE 9 Access / Refresh Token
+
+`/tokens`で短命Accessの自然失効、Refreshによる更新、世代交代、再利用検知、Family停止を実測する。設計は[ADR 007](adr/007-access-refresh-tokens.md)。RefreshのDB状態は保存し、Accessの個別状態は保存しない。DBの追加移行と共通ViewerのRefresh欄を拡張し、Session・JWT・比較教材の操作は維持する。以下は各版時点の設計記録。
+
+---
+
 # v1.8 PHASE 8 SessionとJWTの比較
 
 `/compare`で発行・Profile・ログアウト・コピー再送を比較する。設計は[ADR 006](adr/006-session-jwt-comparison.md)。既存の認証処理を維持し、Cookieを偽装しない実験用Session再送APIのみ追加。失効リスト・複数サーバーは未実装の説明モデルとして区別する。以下は各版時点の設計記録。

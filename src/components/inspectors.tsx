@@ -30,7 +30,7 @@ export function DatabaseView({
       : table === "sessions"
         ? ["id", "user_id", "expires_at", "created_at"]
         : table === "refresh_tokens"
-          ? ["id", "user_id", "token_hash", "expires_at", "revoked_at"]
+          ? ["id", "user_id", "family_id", "generation", "token_hash", "expires_at", "used_at", "revoked_at"]
           : table === "oauth_clients"
             ? ["client_id", "client_name", "redirect_uri"]
             : ["code", "client_id", "user_id", "expires_at"];
@@ -70,7 +70,8 @@ export function DatabaseView({
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      {table !== "users" && table !== "sessions" && (
+      {table === "refresh_tokens" && <p className="notice">PHASE 9の更新用の実記録です。平文のトークンは保存せず、ハッシュ・系列・世代・使用済み／停止日時を確認できます。</p>}
+      {table !== "users" && table !== "sessions" && table !== "refresh_tokens" && (
         <p className="notice">
           予約スキーマのみ。トークン・OAuthはPHASE 7以降で実装します。
         </p>

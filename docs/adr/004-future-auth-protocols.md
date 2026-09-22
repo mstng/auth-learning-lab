@@ -8,3 +8,5 @@
 本版ではJWT発行やOAuthを実装したと見せるUI、ダミーのトークンを成功扱いするAPIは提供しない。
 
 PHASE 7でJWT部分を採用。具体化した判断は[ADR 005](005-jwt-learning.md)。OAuth以降は引き続き未実装。
+
+PHASE 9でRefreshのハッシュ保存・ローテーション・再利用検知・Family停止を採用。期限・教材用HTTPの境界は[ADR 007](007-access-refresh-tokens.md)。OAuthの認可フローは引き続き未実装。

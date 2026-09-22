@@ -19,7 +19,7 @@ const levels = [
   ["Authorization 基礎", "401と403を使い分ける", "/session"],
   ["JWT", "予想して署名・期限・改ざんを確かめる", "/jwt"],
   ["Session vs JWT", "ログアウト後のコピーを再送して比べる", "/compare"],
-  ["Access / Refresh Token", "有効期限と更新"],
+  ["Access / Refresh Token", "期限切れ・更新・古い値の再利用を確かめる", "/tokens"],
   ["OAuth 2.0", "APIアクセスの認可委譲"],
   ["OpenID Connect", "ユーザーの本人確認"],
   ["OAuth vs OIDC", "目的とトークンを比較"],
@@ -37,7 +37,7 @@ export function Dashboard() {
       const d = JSON.parse(localStorage.getItem("authlab-progress") ?? "[]");
       if (Array.isArray(d))
         setDone(
-          d.filter((x: unknown) => typeof x === "number" && x >= 0 && x < 8),
+          d.filter((x: unknown) => typeof x === "number" && x >= 0 && x < 9),
         );
     } catch {}
   }, []);
@@ -55,7 +55,7 @@ export function Dashboard() {
           <p>操作して、データを追って、自分の言葉で説明する。</p>
         </div>
         <span className="phase-pill">
-          PHASE 1–8 <Check size={14} />
+          PHASE 1–9 <Check size={14} />
         </span>
       </div>
       <section className="start-panel">
@@ -117,9 +117,9 @@ export function Dashboard() {
         </div>
         <div className="course-progress">
           <span>
-            <b>{done.length}</b> / 8 学習済み
+            <b>{done.length}</b> / 9 学習済み
           </span>
-          <progress value={done.length} max={8} />
+          <progress value={done.length} max={9} />
         </div>
       </div>
       <p className="muted">
@@ -180,7 +180,7 @@ export function Dashboard() {
         </div>
         <p className="muted">
           このバージョンではLEVEL
-          1〜8を扱います。Token更新・OAuth・OIDC以降は設計書に拡張方針を記載しています。
+          1〜9を扱います。OAuth・OIDC以降は設計書に拡張方針を記載しています。
         </p>
       </section>
     </div>

@@ -73,10 +73,14 @@ export async function snapshot(lab: string): Promise<Snapshot> {
       "SELECT id,user_id,expires_at,created_at FROM sessions WHERE lab_id=$1 ORDER BY created_at",
       [lab],
     );
+    const refresh = await tx.query(
+      "SELECT id,user_id,family_id,generation,token_hash,expires_at,used_at,revoked_at FROM refresh_tokens WHERE lab_id=$1 AND family_id IS NOT NULL ORDER BY created_at,generation,id",
+      [lab],
+    );
     return json<Snapshot>({
       users: u.rows,
       sessions: s.rows,
-      refresh_tokens: [],
+      refresh_tokens: refresh.rows,
       oauth_clients: [],
       authorization_codes: [],
     });

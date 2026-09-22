@@ -1,9 +1,9 @@
 # Authentication Learning Lab 合意済みロードマップ
 
-更新: 2026-09-21
+更新: 2026-09-22
 
 - PHASE 1〜6はv1.6で完成。追加改善案を未完了タスクに戻さない。
-- v1.7でPHASE 7、v1.8でPHASE 8まで完成。PHASE 9以降も段階ごとに実装する。
+- v1.7でPHASE 7、v1.8でPHASE 8、v1.9でPHASE 9まで実装。PHASE 10以降も段階ごとに実装する。
 - 当面の完成目標はPHASE 13。予想→実行→観測→説明を全段階で継承する。
 - PHASEと画面のLEVELは別の番号体系。
 
